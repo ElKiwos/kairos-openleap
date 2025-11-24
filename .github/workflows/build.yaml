@@ -1,0 +1,38 @@
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  read-env:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.export.outputs.VERSION }}
+      baseImage: ${{ steps.export.outputs.BASEIMAGE }}
+      k8sVersion: ${{ steps.export.outputs.K8SVERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: export .env
+        id: export
+        uses: cardinalby/export-env-action@v2
+        with:
+          envFile: .env
+          export: false
+
+  build:
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+      security-events: write
+    needs: read-env
+    uses: kairos-io/kairos-factory-action/.github/workflows/reusable-factory.yaml@v0.0.11
+    with:
+      dockerfile_path: "./Dockerfile"
+      version: ${{ needs.read-env.outputs.version }}
+      base_image: opensuse/leap:16.0
+      kubernetes_version: ${{ needs.read-env.outputs.k8sVersion }}
+      kubernetes_distro: "k3s"
+      model: rpi4
+      arch: arm64
